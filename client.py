@@ -1,6 +1,8 @@
 import websocket
 import json
 import engage_light
+import turnoff_light
+
 try:
     import thread
 except ImportError:
@@ -8,10 +10,15 @@ except ImportError:
 import time
 
 def on_message(ws, message):
-    print(message)
-    engage_light.engage(message)
-    
-
+    response_json = json.loads(message)
+    if response_json['action'] == 'light':
+        if response_json['value'] == True:
+            # turn on light
+            engage_light.engage(response_json['port'])
+        else:
+            # turn off light
+            turnoff_light.turnoff(response_json['port'])
+                
 def on_error(ws, error):
     print(error)
 
@@ -21,8 +28,10 @@ def on_close(ws):
 def on_open(ws):
     def run(*args):
         ws.send(json.dumps({'type': 'CONNECTION', 'msg': '1'}))
+        print("Conexion establecida con el servidor")
         while True:
-            time.sleep(1)
+            ws.send(json.dumps({'type': 'PING', 'msg': 'Keep alive Heroku!!'}))
+            time.sleep(30)
         time.sleep(1)
         ws.send(json.dumps({'type': 'CLOSE', 'msg': '1'}))
         ws.close()
@@ -32,7 +41,7 @@ def on_open(ws):
 
 if __name__ == "__main__":
     websocket.enableTrace(True)
-    ws = websocket.WebSocketApp("ws://192.168.1.13:3000",
+    ws = websocket.WebSocketApp("ws://mighty-reef-55430.herokuapp.com/",
                               on_message = on_message,
                               on_error = on_error,
                               on_close = on_close)
